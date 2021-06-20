@@ -110,7 +110,10 @@
     let WIDTH = 0;
     let HEIGHT = 0;
     let ACTIVE_TOOL = 0;
-    let ACTIVE_MAP = 0;
+    let ACTIVE_MAP = "";
+    const getEmptyMap = (name="map", mapWidth =10, mapHeight=10, tileSize = 32) =>
+        ({layers: [getEmptyLayer("bottom"), getEmptyLayer("middle"), getEmptyLayer("top")], name,
+            mapWidth, mapHeight, tileSize, width: mapWidth * SIZE_OF_CROP,height: mapHeight * SIZE_OF_CROP });
 
     const getSnappedPos = (pos) => Math.round(pos / SIZE_OF_CROP) * SIZE_OF_CROP;
     let selection = [{}];
@@ -118,7 +121,7 @@
     let isMouseDown = false;
     let tiles = [];
     let layers = [];
-    let maps = [];
+    let maps = {};
     let stateHistory = [{}, {}, {}];
 
     function getContext() {
@@ -236,7 +239,7 @@
         }
     }
 
-    const randomLetters = new Array(1680).fill(1).map((_, i) => String.fromCharCode(165 + i));
+    const randomLetters = new Array(10680).fill(1).map((_, i) => String.fromCharCode(165 + i));
     function updateTilesetGridContainer(){
         const gridWidth = tilesetImage.width / SIZE_OF_CROP;
         const gridHeight = tilesetImage.height / SIZE_OF_CROP;
@@ -256,7 +259,7 @@
             const y = Math.floor(tile / gridWidth);
             let tileData = getTileData(x,y);
             if(!tileData?.tileSymbol){
-                setTileData(x,y, {x,y,tilesetIdx, tileSymbol:randomLetters[symbolStartIdx + tile]});
+                setTileData(x,y, {x,y,tilesetIdx, tileSymbol: randomLetters[symbolStartIdx + tile] || ""});
             }
             tileData = getTileData(x,y);
 
@@ -526,7 +529,7 @@
         `;
 
         console.log("FLATTENED", flattenedData, kaboomJsCode);
-        const exportData = {asciiMap, kaboomJsCode, flattenedData, layers, tiles};
+        const exportData = {asciiMap, kaboomJsCode, flattenedData, maps};
         console.log("Exported ", exportData);
         return exportData;
     }
@@ -550,30 +553,24 @@
 
     const updateMaps = ()=>{
         mapsDataSel.innerHTML = "";
-        maps.forEach((map, idx)=>{
+        Object.keys(maps).forEach((key, idx)=>{
             const newOpt = document.createElement("option");
-            newOpt.innerText = `map ${idx}`;
-            newOpt.value = idx;
+            newOpt.innerText = maps[key].name//`map ${idx}`;
+            newOpt.value = key;
             mapsDataSel.appendChild(newOpt);
         })
-        document.getElementById("removeMapBtn").disabled = maps.length === 1;
+        document.getElementById("removeMapBtn").disabled = Object.keys(maps).length === 1;
     }
     const initDataAfterLoad = () =>{
         WIDTH = canvas.width;
         HEIGHT = canvas.height;
         selection = [{}];
-        tiles = []; // shared between maps?
-
-        layers = [getEmptyLayer("bottom"), getEmptyLayer("middle"), getEmptyLayer("top")];
+        tiles = [];
         stateHistory = [{}, {}, {}];
-        maps = [{
-            width: WIDTH,
-            height: HEIGHT,
-            tileSize: SIZE_OF_CROP,
-            mapWidth: WIDTH / SIZE_OF_CROP,
-            mapHeight: HEIGHT / SIZE_OF_CROP,
-            layers // layer uses tiles, which link to tilesets
-        }];
+        ACTIVE_MAP = "Map_1";
+        maps = {[ACTIVE_MAP]: getEmptyMap("Map 1")};
+        layers = maps["Map_1"].layers;
+        console.log("MAPS",maps)
         updateTilesets();
         tilesetDataSel.value = "0";
         IMG_SOURCE = IMAGES[0];
@@ -655,15 +652,33 @@
         // Maps DATA callbacks
         mapsDataSel = document.getElementById("mapsDataSel");
         mapsDataSel.addEventListener("change", e=>{
-            ACTIVE_MAP = Number(e.target.value);
+            ACTIVE_MAP = e.target.value;
+            layers = maps[ACTIVE_MAP].layers;
+            console.log("Changed to" , ACTIVE_MAP, maps[ACTIVE_MAP])
+            SIZE_OF_CROP = maps[ACTIVE_MAP].tileSize;
+            updateLayers();
+            updateTilesetGridContainer();
+            draw();
         })
         document.getElementById("addMapBtn").addEventListener("click",()=>{
-            maps.push([]);
-            updateMaps()
+            const suggestMapName = `Map ${Object.keys(maps).length + 1}`;
+            const result = window.prompt("Enter new map name...", suggestMapName);
+            if(result !== null) {
+
+                const newMapKey = result.trim().replaceAll(" ","_") || suggestMapName;
+                if (newMapKey in maps){
+                    alert("A map with this name already exists.")
+                    return
+                }
+                maps[newMapKey] = getEmptyMap(result.trim());
+            }
+            updateMaps();
         })
         document.getElementById("removeMapBtn").addEventListener("click",()=>{
-            maps.splice(ACTIVE_MAP,1);
+            delete maps[ACTIVE_MAP];
             updateMaps();
+            updateLayers();
+            draw();
         })
         // Tileset DATA Callbacks //tileDataSel
         tileDataSel = document.getElementById("tileDataSel");
@@ -730,7 +745,6 @@
         canvas.addEventListener('pointermove', (e) => {
             if (isMouseDown) {
                 if (ACTIVE_TOOL === 2){
-                    console.log("Panning", e)
                     const rect = e.target.getBoundingClientRect();
                     document.getElementById("canvas_wrapper").style = `transform: translate(${e.clientX-rect.width/2}px,${e.clientY - rect.height}px)`
                 } else {
@@ -808,6 +822,7 @@
 
 
         cropSize.addEventListener('change', e=>{
+            maps[ACTIVE_MAP].tileSize = Number(e.target.value);
             SIZE_OF_CROP = Number(e.target.value);
             draw();
             updateSelection();
