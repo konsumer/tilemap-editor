@@ -68,13 +68,12 @@
       applyButtonText: "OK",
       onApply:console.log,
       onLoadTileSetImage: (file, base64, cb) => {
+        // You can write your own custom load image function here and use it for the tilemap src
         uploadImageToImgur(file).then(result=>{
+          console.log(file, base64);
           console.log("Uploaded to imgur", result)
-          cb(result)
+          cb(result.data.link)
         });
-        // You can write your custom load image function here and return the src
-        console.log(file, base64);
-        return base64
       }
     })
   </script>
