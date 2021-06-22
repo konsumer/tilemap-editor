@@ -7,7 +7,7 @@
     } else {
         // Browser globals
         // @ts-ignore
-        factory((root.TilemapJs = {}));
+        factory((root.TilemapEditor = {}));
     }
 })(typeof self !== 'undefined' ? self : this, function (exports) {
      const drawGrid = (w, h, step = 16) => {
@@ -35,40 +35,49 @@
     });
     const getHtml = (width, height) =>{
         return `
-        <div id="tilemapjs_root" class="card tilemapjs_root">
+       <div id="tilemapjs_root" class="card tilemapjs_root">
  
-       <div class="tileset_opt_field">
-<!--       <div>map:</div>-->
-        <div class="select_container layer" id="mapSelectContainer">
-            <select name="mapsData" id="mapsDataSel">
-            </select>
-            <button id="addMapBtn">+</button>
-            <button id="removeMapBtn">-</button>
-        </div>
-        <div>tile size:</div>
-        <input type="number" id="cropSize" name="crop" placeholder="32" min="1" max="128">
+       <div class="tileset_opt_field header">
         <div id="toolButtonsWrapper">
           <button class="button-as-link active-tool" id="paintToolBtn" value="0" title="paint tiles">🖌️</button>
           <button class="button-as-link" id="eraseToolBtn" value="1" title="erase tiles">🗑️</button>
           <button class="button-as-link" id="panToolBtn" value="2" title="pan">✋</button> 
         </div>
-|
-         <button class="button-as-link" id="clearCanvasBtn" title="clear map">💥</button>
-         <button class="button-as-link" id="aboutBtn" title="clear map">❓</button>
+         <button class="button-as-link" id="aboutBtn" title="About...">❓</button>
         <button class="primary-button" id="confirmBtn">${confirmBtnText  || "Export image"}</button>
       </div>
       <div class="card_body">
         <div class="card_left_column">
-        <div class="select_container layer" id="tilesetSelectContainer">
-            <select name="tileSetSelectData" id="tilesetDataSel">
-<!--                <option value="0">tileset 0</option>-->
+        <details class="details_container">
+          <summary>
+            <span  id="mapSelectContainer">
+            <select name="mapsData" id="mapsDataSel">
             </select>
+            <button id="addMapBtn">+</button>
+            <button id="removeMapBtn">-</button>
+            | <select name="tileSetSelectData" id="tilesetDataSel"></select>
             <button id="replaceTilesetBtn" title="replace">r</button>
             <input id="tilesetReplaceInput" type="file" style="display: none" />
             <button id="addTilesetBtn" title="add">+</button>
             <input id="tilesetReadInput" type="file" style="display: none" />
             <button id="removeTilesetBtn" title="remove">-</button>
-                        <select name="tileData" id="tileDataSel">
+            </span>
+          </summary>
+          <div>
+              <div class="tileset_opt_field">
+                <span>Tile size:</span>
+                <input type="number" id="cropSize" name="crop" placeholder="32" min="1" max="128">
+                <span class="flex">width: </span><input id="canvasWidthInp" value="1" type="number" min="1">
+                <span class="flex">height: </span><input id="canvasHeightInp" value="1" type="number" min="1">
+              </div>
+              <div class="tileset_opt_field">
+                <button id="clearCanvasBtn" title="clear map">💥 Clear map</button>
+              </div>
+          </div>
+
+        </details>
+        <div class="select_container layer" id="tilesetSelectContainer">
+            <select name="tileData" id="tileDataSel">
                 <option value="">Symbols</option>
                 <option value="hurt">hurt</option>
             </select>
@@ -84,14 +93,12 @@
         <div class="card_right-column" style="position:relative">
         <div class="canvas_wrapper" id="canvas_wrapper">
           <canvas id="mapCanvas" width="${width}" height="${height}"></canvas>
-          <div class="canvas_resizer" resizerdir="y"><input value="1" type="number" min="1" resizerdir="y"></input><span>-y-</span></div>
-          <div class="canvas_resizer vertical" resizerdir="x"><input value="${mapTileWidth}" type="number" min="1" resizerdir="x"></input><span>-x-</span></div>
+          <div class="canvas_resizer" resizerdir="y"><input value="1" type="number" min="1" resizerdir="y"><span>-y-</span></div>
+          <div class="canvas_resizer vertical" resizerdir="x"><input value="${mapTileWidth}" type="number" min="1" resizerdir="x"><span>-x-</span></div>
         </div>
         </div>
-        
-        
       <div class="card_right-column layers">
-        <label class="sticky add_layer"><div>Editing Layer: </div><button id="addLayerBtn">➕ Add</button></label>
+        <label class="sticky add_layer"><div>Editing Layer: </div><button id="addLayerBtn" title="Add layer"> ➕</button></label>
         <div class="layers" id="layers">
       </div>
       </div>
@@ -124,6 +131,8 @@
     let maps = {};
     let tileSets = {};
     let stateHistory = [{}, {}, {}];
+
+    let dataExporters = {};
 
     function getContext() {
         const ctx = canvas.getContext('2d');
@@ -179,7 +188,7 @@
         layersElement.innerHTML = layers.map((layer, index)=>{
             return `
               <div class="layer">
-                <button id="selectLayerBtn-${index}" class="layer select_layer" tile-layer="${index}">${layer.name}</button>
+                <button id="selectLayerBtn-${index}" class="layer select_layer" tile-layer="${index}" title="${layer.name}">${layer.name}</button>
                 <span id="setLayerVisBtn-${index}" vis-layer="${index}"></span>
                 <button id="trashLayerBtn-${index}" trash-layer="${index}" ${layers.length > 1 ? "":`disabled="true"`}>🗑️</button>
               </div>
@@ -224,7 +233,17 @@
             tilesetTiles[`${x}-${y}`] = newData;
         }
     }
-    function updateSelection() {
+
+    const setActiveTool = (toolIdx) => {
+        ACTIVE_TOOL = Number(toolIdx);
+        document.getElementById("toolButtonsWrapper").childNodes.forEach((child, idx)=>{
+            child.className = "button-as-link"
+        });
+        document.getElementById("toolButtonsWrapper").querySelector(`[value="${toolIdx}"]`)
+            .className = "button-as-link active-tool"
+    }
+
+    const updateSelection = () => {
         const selected = selection[0];
         if(!selected) return;
         const {x, y} = selected;
@@ -243,6 +262,8 @@
             const tileData = getTileData();
             tilesetSelection.innerText = tileData?.tileSymbol || "";
         }
+
+        if(ACTIVE_TOOL === 1) setActiveTool(0);
     }
 
     const randomLetters = new Array(10680).fill(1).map((_, i) => String.fromCharCode(165 + i));
@@ -341,16 +362,15 @@
             if (event.type === 'pointerdown' || event.type === 'pointermove') {
                 applyCtrlZ(key, isArray);
             }
-
             return;
         }
-
         updateStateHistory(key, isArray);
 
         if (event.shiftKey || event.button === 1) {
             removeTile(key);
         } else if (event.ctrlKey || event.button === 2) {
-            getTile(key);
+            const pickedTile = getTile(key);
+            if(ACTIVE_TOOL === 0 && !pickedTile) setActiveTool(1)
         } else {
             if(ACTIVE_TOOL === 0){
                 addTile(key);
@@ -390,6 +410,9 @@
             //     updateTilesetGridContainer();
             // }
             updateSelection();
+            return true;
+        } else {
+            return false;
         }
     }
 
@@ -549,7 +572,9 @@
         }
         if(updateField) {
             document.querySelector(".canvas_resizer[resizerdir='x'] input").value = String(mapTileWidth);
-            if(updateField) document.querySelector(".canvas_resizer[resizerdir='y'] input").value = String(mapTileHeight);
+            document.getElementById("canvasWidthInp").value  = String(mapTileWidth);
+            document.querySelector(".canvas_resizer[resizerdir='y'] input").value = String(mapTileHeight);
+            document.getElementById("canvasHeightInp").value  = String(mapTileHeight);
         }
         draw();
     }
@@ -653,8 +678,7 @@
         tilesetDataSel.value = "0";
         cropSize.value = SIZE_OF_CROP;
         updateMaps();
-        document.querySelector(".canvas_resizer[resizerdir='y'] input").value = mapTileHeight;
-        document.querySelector(".canvas_resizer[resizerdir='x'] input").value = mapTileWidth;
+        updateMapSize({updateField: true});
     }
 
     exports.init = (
@@ -666,12 +690,15 @@
             tileSetImages,
             applyButtonText,
             onApply,
-            onLoadTileSetImage
+            onLoadTileSetImage,
+            tileSetLoaderPrompt,
+            exporters
         }
     ) => {
         // Attach
         const attachTo = document.getElementById(attachToId);
         if(attachTo === null) return;
+        dataExporters = exporters;
 
         IMAGES = tileSetImages;
         SIZE_OF_CROP = tileSize || 32;
@@ -774,43 +801,50 @@
             tilesetImage.src = TILESET_ELEMENTS[e.target.value].src;
         })
 
+        const replaceSelectedTileSet = (src) => {
+            IMAGES[Number(tilesetDataSel.value)] = src;
+            updateTilesets();
+        }
+        const addNewTileSet = (src) => {
+            IMAGES.push(src);
+            updateTilesets();
+        }
         // replace tileset
         document.getElementById("tilesetReplaceInput").addEventListener("change",e=>{
             toBase64(e.target.files[0]).then(base64Src=>{
                 if(onLoadTileSetImage){
-                    onLoadTileSetImage(e.target.files[0], base64Src, resultSrc => {
-                        IMAGES[Number(tilesetDataSel.value)] =resultSrc;
-                        updateTilesets()
-                    });
+                    onLoadTileSetImage(replaceSelectedTileSet, e.target.files[0], base64Src);
                 } else {
                     IMAGES[Number(tilesetDataSel.value)] = base64Src;
                     updateTilesets();
                 }
-
             })
         })
         document.getElementById("replaceTilesetBtn").addEventListener("click",()=>{
-            document.getElementById("tilesetReplaceInput").click();
+            if(!tileSetLoaderPrompt){
+                document.getElementById("tilesetReplaceInput").click();
+            } else {
+                tileSetLoaderPrompt(replaceSelectedTileSet)
+            }
         });
         // add tileset
         document.getElementById("tilesetReadInput").addEventListener("change",e=>{
            toBase64(e.target.files[0]).then(base64Src=>{
                if(onLoadTileSetImage){
-                   onLoadTileSetImage(e.target.files[0], base64Src, resultSrc => {
-                       IMAGES.push(resultSrc);
-                       updateTilesets();
-                   })
+                   onLoadTileSetImage(addNewTileSet, e.target.files[0], base64Src)
                } else {
-                   IMAGES.push(base64Src);
-                   updateTilesets();
+                   addNewTileSet(base64Src);
                }
-
             })
         })
         // remove tileset
         document.getElementById("addTilesetBtn").addEventListener("click",()=>{
             //Opens a file selector to load its data (tileset file name and base64)
-            document.getElementById("tilesetReadInput").click();
+            if(!tileSetLoaderPrompt) {
+                document.getElementById("tilesetReadInput").click();
+            } else {
+                tileSetLoaderPrompt(addNewTileSet);
+            }
         });
         document.getElementById("removeTilesetBtn").addEventListener("click",()=>{
             //Remove current tileset
@@ -838,6 +872,12 @@
             }
         });
         // Canvas Resizer ===================
+        document.getElementById("canvasWidthInp").addEventListener("change", e=>{
+            updateMapSize({mapWidth: Number(e.target.value), updateField:true  })
+        })
+        document.getElementById("canvasHeightInp").addEventListener("change", e=>{
+            updateMapSize({mapHeight: Number(e.target.value), updateField:true })
+        })
         document.querySelector(".canvas_resizer[resizerdir='y'] span").addEventListener("pointerdown", e=>{
             resizingCanvas = e.target.parentNode;
         })
@@ -845,9 +885,11 @@
             resizingCanvas = e.target.parentNode;
         })
         document.querySelector(".canvas_resizer[resizerdir='y'] input").addEventListener("change", e=>{
+            console.log("new:",e)
             updateMapSize({mapHeight: Number(e.target.value)})
         })
         document.querySelector(".canvas_resizer[resizerdir='x'] input").addEventListener("change", e=>{
+            console.log("new:",Number(e.target.value))
             updateMapSize({mapWidth: Number(e.target.value) })
         })
         document.addEventListener("pointermove", e=>{
@@ -855,25 +897,20 @@
                 const isVertical = resizingCanvas.getAttribute("resizerdir") === "y";
                 const snappedPos = getSnappedPos(isVertical? (e.y - 40): (e.x - tilesetImage.width));
                 if(isVertical){
-                    updateMapSize({mapHeight: snappedPos / SIZE_OF_CROP})
+                    updateMapSize({mapHeight: snappedPos / SIZE_OF_CROP, updateField: true})
                 } else {
-                    updateMapSize({mapWidth: snappedPos / SIZE_OF_CROP})
+                    updateMapSize({mapWidth: snappedPos / SIZE_OF_CROP, updateField: true})
                 }
                 draw();
             }
         })
         document.addEventListener("pointerup", ()=>{
-            updateMapSize({updateField: true})
             resizingCanvas = false;
         })
 
         document.getElementById("toolButtonsWrapper").addEventListener("click",e=>{
             if (e.target.nodeName !== 'BUTTON') return;
-            ACTIVE_TOOL = Number(e.target.value);
-            document.getElementById("toolButtonsWrapper").childNodes.forEach((child, idx)=>{
-                child.className = "button-as-link"
-            });
-            e.target.className = "button-as-link active-tool"
+            setActiveTool(e.target.value);
         })
 
         cropSize.addEventListener('change', e=>{
@@ -891,18 +928,22 @@
         initDataAfterLoad();
 
         document.getElementById("aboutBtn").addEventListener("click", () =>{
-            alert(`
+            const ask = window.confirm(`
                 Tilemap editor
                 Created by Todor Imreorov (blurymind@gmail.com)
                 https://github.com/blurymind/tilemap-editor
                 
+                Would you like to donate to the project or visit its page?
+                
+                Instructions:
                 right click on map - picks tile
                 mid-click - erases tile
                 left-click adds tile
                 
                 right-click on tileset - lets you change tile symbol or metadata
-                left-click - selects tile
+                left-click - selects tile      
             `)
+            if(ask) window.open('https://github.com/blurymind/tilemap-editor', '_blank');
         })
     };
 });
