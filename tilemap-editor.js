@@ -71,7 +71,8 @@
                 <span class="flex">height: </span><input id="canvasHeightInp" value="1" type="number" min="1">
               </div>
               <div class="tileset_opt_field">
-                <button id="clearCanvasBtn" title="clear map">💥 Clear map</button>
+                <button id="renameMapBtn" title="Rename map">🏷️ Rename map</button>
+                <button id="clearCanvasBtn" title="Clear map">💥 Clear map</button>
               </div>
           </div>
 
@@ -557,25 +558,23 @@
         return exportData;
     }
 
-    const updateMapSize = ({mapWidth, mapHeight, updateField} ) =>{
-        if(mapWidth && mapWidth > 1){
-            mapTileWidth = mapWidth;
+    const updateMapSize = (size) =>{
+        if(size?.mapWidth && size?.mapWidth > 1){
+            mapTileWidth = size?.mapWidth;
             WIDTH = mapTileWidth * SIZE_OF_CROP;
             maps[ACTIVE_MAP].mapWidth = mapTileWidth;
             document.querySelector(".canvas_resizer[resizerdir='x']").style=`left:${WIDTH}px`;
         }
-        if(mapHeight && mapHeight > 1){
-            mapTileHeight = mapHeight;
+        if(size?.mapHeight && size?.mapHeight > 1){
+            mapTileHeight = size?.mapHeight;
             HEIGHT = mapTileHeight * SIZE_OF_CROP;
             maps[ACTIVE_MAP].mapHeight = mapTileHeight;
             document.querySelector(".canvas_resizer[resizerdir='y']").style=`top:${HEIGHT}px`;
         }
-        if(updateField) {
-            document.querySelector(".canvas_resizer[resizerdir='x'] input").value = String(mapTileWidth);
-            document.getElementById("canvasWidthInp").value  = String(mapTileWidth);
-            document.querySelector(".canvas_resizer[resizerdir='y'] input").value = String(mapTileHeight);
-            document.getElementById("canvasHeightInp").value  = String(mapTileHeight);
-        }
+        document.querySelector(".canvas_resizer[resizerdir='x'] input").value = String(mapTileWidth);
+        document.getElementById("canvasWidthInp").value  = String(mapTileWidth);
+        document.querySelector(".canvas_resizer[resizerdir='y'] input").value = String(mapTileHeight);
+        document.getElementById("canvasHeightInp").value  = String(mapTileHeight);
         draw();
     }
 
@@ -583,7 +582,7 @@
         ACTIVE_MAP = id;
         layers = maps[ACTIVE_MAP].layers;
         setCropSize(maps[ACTIVE_MAP].tileSize);
-        updateMapSize({mapWidth: maps[ACTIVE_MAP].mapWidth, mapHeight: maps[ACTIVE_MAP].mapHeight, updateField:true})
+        updateMapSize({mapWidth: maps[ACTIVE_MAP].mapWidth, mapHeight: maps[ACTIVE_MAP].mapHeight})
         updateLayers();
         updateTilesetGridContainer();
         draw();
@@ -678,7 +677,7 @@
         tilesetDataSel.value = "0";
         cropSize.value = SIZE_OF_CROP;
         updateMaps();
-        updateMapSize({updateField: true});
+        updateMapSize();
     }
 
     exports.init = (
@@ -758,12 +757,12 @@
         })
         document.getElementById("addMapBtn").addEventListener("click",()=>{
             const suggestMapName = `Map ${Object.keys(maps).length + 1}`;
-            const result = window.prompt("Enter new map name...", suggestMapName);
+            const result = window.prompt("Enter new map key...", suggestMapName);
             if(result !== null) {
 
                 const newMapKey = result.trim().replaceAll(" ","_") || suggestMapName;
                 if (newMapKey in maps){
-                    alert("A map with this name already exists.")
+                    alert("A map with this key already exists.")
                     return
                 }
                 maps[newMapKey] = getEmptyMap(result.trim());
@@ -873,10 +872,10 @@
         });
         // Canvas Resizer ===================
         document.getElementById("canvasWidthInp").addEventListener("change", e=>{
-            updateMapSize({mapWidth: Number(e.target.value), updateField:true  })
+            updateMapSize({mapWidth: Number(e.target.value)})
         })
         document.getElementById("canvasHeightInp").addEventListener("change", e=>{
-            updateMapSize({mapHeight: Number(e.target.value), updateField:true })
+            updateMapSize({mapHeight: Number(e.target.value)})
         })
         document.querySelector(".canvas_resizer[resizerdir='y'] span").addEventListener("pointerdown", e=>{
             resizingCanvas = e.target.parentNode;
@@ -897,9 +896,9 @@
                 const isVertical = resizingCanvas.getAttribute("resizerdir") === "y";
                 const snappedPos = getSnappedPos(isVertical? (e.y - 40): (e.x - tilesetImage.width));
                 if(isVertical){
-                    updateMapSize({mapHeight: snappedPos / SIZE_OF_CROP, updateField: true})
+                    updateMapSize({mapHeight: snappedPos / SIZE_OF_CROP})
                 } else {
-                    updateMapSize({mapWidth: snappedPos / SIZE_OF_CROP, updateField: true})
+                    updateMapSize({mapWidth: snappedPos / SIZE_OF_CROP})
                 }
                 draw();
             }
@@ -924,6 +923,18 @@
         } else {
             confirmBtn.addEventListener('click', exportImage);
         }
+
+        document.getElementById("renameMapBtn").addEventListener("click",()=>{
+            const newName = window.prompt("Change map name:", maps[ACTIVE_MAP].name || "Map");
+            if(newName !== null && maps[ACTIVE_MAP].name !== newName){
+                if(Object.values(maps).map(map=>map.name).includes(newName)){
+                    alert(`${newName} already exists`);
+                    return
+                }
+                maps[ACTIVE_MAP].name = newName;
+                updateMaps();
+            }
+        })
 
         initDataAfterLoad();
 
