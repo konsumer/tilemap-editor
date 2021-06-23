@@ -100,9 +100,10 @@
     // Pwa stuff
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker
-              .register('/sw.js')
+              .register('/tilemap-editor/sw.js')
               .then(() => { console.log('Service Worker Registered'); });
     }
+
     let deferredPrompt;
     const addBtn = document.getElementById("addPwaBtn");
     window.addEventListener('beforeinstallprompt', (e) => {
