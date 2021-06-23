@@ -1,9 +1,9 @@
 self.addEventListener('install', (e) => {
   e.waitUntil(
     caches.open('tilemap-editor-store').then((cache) => cache.addAll([
-      'tilemap-editor/index.html',
-      'tilemap-editor/src/tilemap-editor.js',
-      'tilemap-editor/src/styles.css',
+      '/index.html',
+      '/src/tilemap-editor.js',
+      '/src/styles.css',
     ])),
   );
 });
