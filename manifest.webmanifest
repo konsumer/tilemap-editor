@@ -12,6 +12,6 @@
   ],
   "name": "TileMap Editor",
   "short_name": "Tile map",
-  "start_url": "/",
+  "start_url": "tilemap-editor/",
   "theme_color": "purple"
 }
