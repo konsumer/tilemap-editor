@@ -48,8 +48,8 @@
       </div>
       <div class="card_body">
         <div class="card_left_column">
-        <details class="details_container">
-          <summary>
+        <details class="details_container" open="true">
+          <summary >
             <span  id="mapSelectContainer">
             <select name="mapsData" id="mapsDataSel">
             </select>
@@ -69,6 +69,12 @@
                 <input type="number" id="cropSize" name="crop" placeholder="32" min="1" max="128">
                 <span class="flex">width: </span><input id="canvasWidthInp" value="1" type="number" min="1">
                 <span class="flex">height: </span><input id="canvasHeightInp" value="1" type="number" min="1">
+              </div>
+              <div class="tileset_opt_field">
+                <span>Tileset loader:</span>
+                <select name="tileSetLoaders" id="tileSetLoadersSel">
+<!--                 <option value="">base64</option>-->
+                </select>
               </div>
               <div class="tileset_opt_field">
                 <button id="renameMapBtn" title="Rename map">🏷️ Rename map</button>
@@ -99,7 +105,7 @@
         </div>
         </div>
       <div class="card_right-column layers">
-        <label class="sticky add_layer"><div>Editing Layer: </div><button id="addLayerBtn" title="Add layer"> ➕</button></label>
+        <label class="sticky add_layer"><label id="activeLayerLabel">Editing Layer </label><button id="addLayerBtn" title="Add layer"> ➕</button></label>
         <div class="layers" id="layers">
       </div>
       </div>
@@ -133,7 +139,9 @@
     let tileSets = {};
     let stateHistory = [{}, {}, {}];
 
-    let dataExporters = {};
+    // let dataExporters = {};
+    let apiTileSetLoaders = {};
+    let selectedTileSetLoader = {};
 
     function getContext() {
         const ctx = canvas.getContext('2d');
@@ -144,12 +152,13 @@
     function setLayer(newLayer) {
         currentLayer = Number(newLayer);
 
-        oldActivedLayer = document.querySelector('.layer.active');
+        const oldActivedLayer = document.querySelector('.layer.active');
         if (oldActivedLayer) {
             oldActivedLayer.classList.remove('active');
         }
 
         document.querySelector(`.layer[tile-layer="${newLayer}"]`)?.classList.add('active');
+        document.getElementById("activeLayerLabel").innerText = `Editing Layer: ${layers[newLayer]?.name}`;
     }
 
     function setLayerIsVisible(layer, override = null) {
@@ -689,15 +698,23 @@
             tileSetImages,
             applyButtonText,
             onApply,
-            onLoadTileSetImage,
-            tileSetLoaderPrompt,
-            exporters
+            // onLoadTileSetImage,
+            // tileSetLoaderPrompt,
+            // exporters,
+            tileSetLoaders
         }
     ) => {
         // Attach
         const attachTo = document.getElementById(attachToId);
         if(attachTo === null) return;
-        dataExporters = exporters;
+        // dataExporters = exporters;
+        apiTileSetLoaders = tileSetLoaders;
+        apiTileSetLoaders.base64 = {
+            name: "Fs (as base64)",
+            onSelectImage: (setSrc, file, base64) => {
+                setSrc(base64);
+            },
+        }
 
         IMAGES = tileSetImages;
         SIZE_OF_CROP = tileSize || 32;
@@ -811,40 +828,78 @@
         // replace tileset
         document.getElementById("tilesetReplaceInput").addEventListener("change",e=>{
             toBase64(e.target.files[0]).then(base64Src=>{
-                if(onLoadTileSetImage){
-                    onLoadTileSetImage(replaceSelectedTileSet, e.target.files[0], base64Src);
-                } else {
-                    IMAGES[Number(tilesetDataSel.value)] = base64Src;
-                    updateTilesets();
+                // if(onLoadTileSetImage){
+                //     onLoadTileSetImage(replaceSelectedTileSet, e.target.files[0], base64Src);
+                // } else {
+                //     IMAGES[Number(tilesetDataSel.value)] = base64Src;
+                //     updateTilesets();
+                // }
+                if (selectedTileSetLoader.onSelectImage) {
+                    selectedTileSetLoader.onSelectImage(replaceSelectedTileSet, e.target.files[0], base64Src);
                 }
+                // if (selectedTileSetLoader.prompt) {
+                //     selectedTileSetLoader.prompt(replaceSelectedTileSet);
+                // }
             })
         })
         document.getElementById("replaceTilesetBtn").addEventListener("click",()=>{
-            if(!tileSetLoaderPrompt){
+            // if(!tileSetLoaderPrompt){
+            //     document.getElementById("tilesetReplaceInput").click();
+            // } else {
+            //     tileSetLoaderPrompt(replaceSelectedTileSet)
+            // }
+            if (selectedTileSetLoader.onSelectImage) {
                 document.getElementById("tilesetReplaceInput").click();
-            } else {
-                tileSetLoaderPrompt(replaceSelectedTileSet)
+            }
+            if (selectedTileSetLoader.prompt) {
+                selectedTileSetLoader.prompt(replaceSelectedTileSet);
             }
         });
         // add tileset
         document.getElementById("tilesetReadInput").addEventListener("change",e=>{
            toBase64(e.target.files[0]).then(base64Src=>{
-               if(onLoadTileSetImage){
-                   onLoadTileSetImage(addNewTileSet, e.target.files[0], base64Src)
-               } else {
-                   addNewTileSet(base64Src);
+               // if(onLoadTileSetImage){
+               //     onLoadTileSetImage(addNewTileSet, e.target.files[0], base64Src)
+               // } else {
+               //     addNewTileSet(base64Src);
+               // }
+               if (selectedTileSetLoader.onSelectImage) {
+                   selectedTileSetLoader.onSelectImage(addNewTileSet, e.target.files[0], base64Src)
                }
+               // else {
+               //     addNewTileSet(base64Src);
+               // }
             })
         })
         // remove tileset
         document.getElementById("addTilesetBtn").addEventListener("click",()=>{
             //Opens a file selector to load its data (tileset file name and base64)
-            if(!tileSetLoaderPrompt) {
+            // if(!tileSetLoaderPrompt) {
+            //     document.getElementById("tilesetReadInput").click();
+            // } else {
+            //     tileSetLoaderPrompt(addNewTileSet);
+            // }
+            if (selectedTileSetLoader.onSelectImage) {
                 document.getElementById("tilesetReadInput").click();
-            } else {
-                tileSetLoaderPrompt(addNewTileSet);
+            }
+            if (selectedTileSetLoader.prompt) {
+                selectedTileSetLoader.prompt(addNewTileSet);
             }
         });
+        const tileSetLoadersSel = document.getElementById("tileSetLoadersSel");
+        Object.entries(apiTileSetLoaders).forEach(([key,loader])=>{
+            console.log("TS loader", key,loader)
+            const tsLoaderOption = document.createElement("option");
+            tsLoaderOption.value = key;
+            tsLoaderOption.innerText = loader.name;
+            tileSetLoadersSel.appendChild(tsLoaderOption);
+        });
+        selectedTileSetLoader = apiTileSetLoaders[tileSetLoadersSel.value];
+        console.log("EEE", selectedTileSetLoader)
+        tileSetLoadersSel.addEventListener("change", e=>{
+            selectedTileSetLoader = apiTileSetLoaders[e.target.value];
+            console.log("changed to", selectedTileSetLoader)
+        })
         document.getElementById("removeTilesetBtn").addEventListener("click",()=>{
             //Remove current tileset
             if (tilesetDataSel.value !== "0") {
