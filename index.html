@@ -109,7 +109,7 @@
     const addBtn = document.getElementById("addPwaBtn");
     window.addEventListener('beforeinstallprompt', (e) => {
       // Prevent Chrome 67 and earlier from automatically showing the prompt
-      e.preventDefault();
+      // e.preventDefault();
       // Stash the event so it can be triggered later.
       deferredPrompt = e;
       // Update UI to notify the user they can add to home screen
@@ -138,13 +138,14 @@
   <style>
     #addPwaBtn {
       position: absolute;
-      bottom: 10px;
-      left: 50%;
+      bottom: 60px;
+      left: 10px;
       background: #1a1a1a;
       color: yellow;
       border: 1px solid grey;
       border-radius: 3px;
       padding: 10px;
+      z-index: 100;
     }
   </style>
 
