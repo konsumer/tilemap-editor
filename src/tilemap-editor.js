@@ -72,9 +72,7 @@
               </div>
               <div class="tileset_opt_field">
                 <span>Tileset loader:</span>
-                <select name="tileSetLoaders" id="tileSetLoadersSel">
-<!--                 <option value="">base64</option>-->
-                </select>
+                <select name="tileSetLoaders" id="tileSetLoadersSel"></select>
               </div>
               <div class="tileset_opt_field">
                 <button id="renameMapBtn" title="Rename map">🏷️ Rename map</button>
@@ -139,7 +137,6 @@
     let tileSets = {};
     let stateHistory = [{}, {}, {}];
 
-    // let dataExporters = {};
     let apiTileSetLoaders = {};
     let selectedTileSetLoader = {};
 
@@ -698,17 +695,13 @@
             tileSetImages,
             applyButtonText,
             onApply,
-            // onLoadTileSetImage,
-            // tileSetLoaderPrompt,
-            // exporters,
             tileSetLoaders
         }
     ) => {
         // Attach
         const attachTo = document.getElementById(attachToId);
         if(attachTo === null) return;
-        // dataExporters = exporters;
-        apiTileSetLoaders = tileSetLoaders;
+        apiTileSetLoaders = tileSetLoaders || {};
         apiTileSetLoaders.base64 = {
             name: "Fs (as base64)",
             onSelectImage: (setSrc, file, base64) => {
@@ -828,26 +821,12 @@
         // replace tileset
         document.getElementById("tilesetReplaceInput").addEventListener("change",e=>{
             toBase64(e.target.files[0]).then(base64Src=>{
-                // if(onLoadTileSetImage){
-                //     onLoadTileSetImage(replaceSelectedTileSet, e.target.files[0], base64Src);
-                // } else {
-                //     IMAGES[Number(tilesetDataSel.value)] = base64Src;
-                //     updateTilesets();
-                // }
                 if (selectedTileSetLoader.onSelectImage) {
                     selectedTileSetLoader.onSelectImage(replaceSelectedTileSet, e.target.files[0], base64Src);
                 }
-                // if (selectedTileSetLoader.prompt) {
-                //     selectedTileSetLoader.prompt(replaceSelectedTileSet);
-                // }
             })
         })
         document.getElementById("replaceTilesetBtn").addEventListener("click",()=>{
-            // if(!tileSetLoaderPrompt){
-            //     document.getElementById("tilesetReplaceInput").click();
-            // } else {
-            //     tileSetLoaderPrompt(replaceSelectedTileSet)
-            // }
             if (selectedTileSetLoader.onSelectImage) {
                 document.getElementById("tilesetReplaceInput").click();
             }
@@ -858,27 +837,13 @@
         // add tileset
         document.getElementById("tilesetReadInput").addEventListener("change",e=>{
            toBase64(e.target.files[0]).then(base64Src=>{
-               // if(onLoadTileSetImage){
-               //     onLoadTileSetImage(addNewTileSet, e.target.files[0], base64Src)
-               // } else {
-               //     addNewTileSet(base64Src);
-               // }
                if (selectedTileSetLoader.onSelectImage) {
                    selectedTileSetLoader.onSelectImage(addNewTileSet, e.target.files[0], base64Src)
                }
-               // else {
-               //     addNewTileSet(base64Src);
-               // }
             })
         })
         // remove tileset
         document.getElementById("addTilesetBtn").addEventListener("click",()=>{
-            //Opens a file selector to load its data (tileset file name and base64)
-            // if(!tileSetLoaderPrompt) {
-            //     document.getElementById("tilesetReadInput").click();
-            // } else {
-            //     tileSetLoaderPrompt(addNewTileSet);
-            // }
             if (selectedTileSetLoader.onSelectImage) {
                 document.getElementById("tilesetReadInput").click();
             }
