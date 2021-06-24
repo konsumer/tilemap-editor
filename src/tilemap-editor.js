@@ -327,10 +327,10 @@
     }
 
     // the tile needs to use the image of the tileset it came from
-    function draw(drawGrid = true) {
+    function draw(shouldDrawGrid = true) {
         const ctx = getContext();
         ctx.clearRect(0, 0, WIDTH, HEIGHT);
-        if(drawGrid)drawGrid(WIDTH, HEIGHT, SIZE_OF_CROP);
+        if(shouldDrawGrid)drawGrid(WIDTH, HEIGHT, SIZE_OF_CROP);
 
         layers.forEach((layer) => {
             Object.keys(layer.tiles).forEach((key) => {
@@ -482,7 +482,7 @@
 
         const image = new Image();
         image.src = data;
-        image.crossOrigin="anonymous";
+        image.crossOrigin = "anonymous";
 
         const w = window.open('');
         w.document.write(image.outerHTML);
