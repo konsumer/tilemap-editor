@@ -486,6 +486,7 @@
 
         const w = window.open('');
         w.document.write(image.outerHTML);
+        draw();
     }
 
     exports.getLayers = ()=> {
@@ -575,6 +576,7 @@
             tilesetDataSel.appendChild(newOpt);
             const tilesetImgElement = document.createElement("img");
             tilesetImgElement.src = tsImage;
+            tilesetImgElement.crossOrigin = "Anonymous";
             // Add tileset data for all tiles
             tilesetImgElement.addEventListener("load",()=>{
                 const gridWidth = tilesetImgElement.width / SIZE_OF_CROP;
@@ -602,6 +604,7 @@
             .map(img => new Promise(resolve => { img.onload = img.onerror = resolve; })))
             .then(() => {
                 tilesetImage.src = TILESET_ELEMENTS[0].src;
+                tilesetImage.crossOrigin = "Anonymous";
                 updateSelection();
                 updateTilesetGridContainer();
             });
@@ -783,6 +786,7 @@
         tilesetDataSel = document.getElementById("tilesetDataSel");
         tilesetDataSel.addEventListener("change",e=>{
             tilesetImage.src = TILESET_ELEMENTS[e.target.value].src;
+            tilesetImage.crossOrigin = "Anonymous";
         })
 
         const replaceSelectedTileSet = (src) => {
