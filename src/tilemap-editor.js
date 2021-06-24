@@ -43,8 +43,28 @@
             <div class="dropdown" id="fileMenuDropDown">
                 <span class="item" onclick="alert('TODO')">Open json</span>
                 <span class="item" onclick="alert('TODO')">Save json</span>
-                <span class="item" onclick="alert('TODO')">Save screenshot</span>
-                <span class="item" onclick="alert('TODO')">About</span>
+                                 
+                <a class="button item button-as-link" href="#popup2">About</a>
+                <div id="popup2" class="overlay">
+                <div class="popup">
+                <h4>Tilemap editor</h4>
+                <a class="close" href="#">&times;</a>
+                <div class="content"> 
+                    <div>Created by Todor Imreorov (blurymind@gmail.com)</div>
+                    <br/>
+                    <div><a class="button-as-link" href="https://github.com/blurymind/tilemap-editor">Project page (Github)</a></div>
+                    <div><a class="button-as-link" href="https://ko-fi.com/blurymind">Donate page (ko-fi)</a></div>
+                    <br/>
+                    <div>Instructions:</div>
+                    <div>right click on map - picks tile</div>
+                    <div>mid-click - erases tile</div>
+                    <div>left-click adds tile</div> 
+                    <div>right-click on tileset - lets you change tile symbol or metadata</div>
+                    <div>left-click - selects tile</div>
+ 
+                </div>
+                </div>
+                </div>
             </div>
         </div>
         <div id="toolButtonsWrapper">
@@ -53,7 +73,6 @@
           <button class="button-as-link" id="panToolBtn" value="2" title="pan">✋</button> 
         </div>
         <div>
-            <button class="button-as-link" id="aboutBtn" title="About...">❓</button>
             <button class="primary-button" id="confirmBtn">${confirmBtnText || "apply"}</button>
         </div>
 
@@ -63,14 +82,10 @@
         <details class="details_container" open="true">
           <summary >
             <span  id="mapSelectContainer">
-            <select name="mapsData" id="mapsDataSel">
-            </select>
-            <button id="addMapBtn">+</button>
-            <button id="removeMapBtn">-</button>
-            | <select name="tileSetSelectData" id="tilesetDataSel"></select>
-            <button id="replaceTilesetBtn" title="replace">r</button>
+            | <select name="tileSetSelectData" id="tilesetDataSel" class="limited_select"></select>
+            <button id="replaceTilesetBtn" title="replace tileset">r</button>
             <input id="tilesetReplaceInput" type="file" style="display: none" />
-            <button id="addTilesetBtn" title="add">+</button>
+            <button id="addTilesetBtn" title="add tileset">+</button>
             <input id="tilesetReadInput" type="file" style="display: none" />
             <button id="removeTilesetBtn" title="remove">-</button>
             </span>
@@ -79,16 +94,12 @@
               <div class="tileset_opt_field">
                 <span>Tile size:</span>
                 <input type="number" id="cropSize" name="crop" placeholder="32" min="1" max="128">
-                <span class="flex">width: </span><input id="canvasWidthInp" value="1" type="number" min="1">
-                <span class="flex">height: </span><input id="canvasHeightInp" value="1" type="number" min="1">
+<!--                <span class="flex">width: </span><input id="canvasWidthInp" value="1" type="number" min="1">-->
+<!--                <span class="flex">height: </span><input id="canvasHeightInp" value="1" type="number" min="1">-->
               </div>
               <div class="tileset_opt_field">
                 <span>Tileset loader:</span>
                 <select name="tileSetLoaders" id="tileSetLoadersSel"></select>
-              </div>
-              <div class="tileset_opt_field">
-                <button id="renameMapBtn" title="Rename map">🏷️ Rename map</button>
-                <button id="clearCanvasBtn" title="Clear map">💥 Clear map</button>
               </div>
           </div>
 
@@ -115,7 +126,31 @@
         </div>
         </div>
       <div class="card_right-column layers">
-        <label class="sticky add_layer"><label id="activeLayerLabel">Editing Layer </label><button id="addLayerBtn" title="Add layer"> ➕</button></label>
+      <div id="mapSelectContainer" class="tilemaps_selector">
+            <select name="mapsData" id="mapsDataSel"></select>
+            <button id="addMapBtn">+</button>
+            <button id="removeMapBtn">-</button>            
+            <a class="button" href="#popup1">📏</a>
+            <div id="popup1" class="overlay">
+            <div class="popup">
+            <h4>TileMap settings</h4>
+            <a class="close" href="#">&times;</a>
+            <div class="content">
+                <span class="flex">width: </span><input id="canvasWidthInp" value="1" type="number" min="1">
+                <span class="flex">height: </span><input id="canvasHeightInp" value="1" type="number" min="1">
+                
+                <div class="tileset_opt_field">
+                <button id="renameMapBtn" title="Rename map">Rename</button>
+                <button id="clearCanvasBtn" title="Clear map">Clear</button>
+              </div>
+            </div>
+            </div>
+            </div>
+        </div>
+
+        <label class="sticky add_layer">
+            <label id="activeLayerLabel">Editing Layer </label><button id="addLayerBtn" title="Add layer">+</button>
+        </label>
         <div class="layers" id="layers">
       </div>
       </div>
@@ -208,9 +243,9 @@
         layersElement.innerHTML = layers.map((layer, index)=>{
             return `
               <div class="layer">
-                <button id="selectLayerBtn-${index}" class="layer select_layer" tile-layer="${index}" title="${layer.name}">${layer.name}</button>
+                <div id="selectLayerBtn-${index}" class="layer select_layer" tile-layer="${index}" title="${layer.name}">${layer.name}</div>
                 <span id="setLayerVisBtn-${index}" vis-layer="${index}"></span>
-                <button id="trashLayerBtn-${index}" trash-layer="${index}" ${layers.length > 1 ? "":`disabled="true"`}>🗑️</button>
+                <div id="trashLayerBtn-${index}" trash-layer="${index}" ${layers.length > 1 ? "":`disabled="true"`}>🗑️</div>
               </div>
             `
         }).reverse().join("\n")
@@ -943,24 +978,5 @@
         })
 
         initDataAfterLoad();
-
-        document.getElementById("aboutBtn").addEventListener("click", () =>{
-            const ask = window.confirm(`
-                Tilemap editor
-                Created by Todor Imreorov (blurymind@gmail.com)
-                https://github.com/blurymind/tilemap-editor
-                
-                Would you like to donate to the project or visit its page?
-                
-                Instructions:
-                right click on map - picks tile
-                mid-click - erases tile
-                left-click adds tile
-                
-                right-click on tileset - lets you change tile symbol or metadata
-                left-click - selects tile      
-            `)
-            if(ask) window.open('https://github.com/blurymind/tilemap-editor', '_blank');
-        })
     };
 });
