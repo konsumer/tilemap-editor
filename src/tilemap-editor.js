@@ -327,10 +327,10 @@
     }
 
     // the tile needs to use the image of the tileset it came from
-    function draw() {
+    function draw(drawGrid = true) {
         const ctx = getContext();
         ctx.clearRect(0, 0, WIDTH, HEIGHT);
-        drawGrid(WIDTH, HEIGHT, SIZE_OF_CROP);
+        if(drawGrid)drawGrid(WIDTH, HEIGHT, SIZE_OF_CROP);
 
         layers.forEach((layer) => {
             Object.keys(layer.tiles).forEach((key) => {
@@ -477,10 +477,12 @@
     }
 
     function exportImage() {
+        draw(false);
         const data = canvas.toDataURL();
 
         const image = new Image();
         image.src = data;
+        image.crossOrigin="anonymous";
 
         const w = window.open('');
         w.document.write(image.outerHTML);
@@ -673,6 +675,10 @@
             },
         }
         apiTileMapExporters = tileMapExporters;
+        apiTileMapExporters.exportAsImage = {
+            name: "Export as image",
+            transformer: exportImage
+        }
 
         IMAGES = tileSetImages;
         SIZE_OF_CROP = tileSize || 32;
@@ -904,8 +910,6 @@
         clearCanvasBtn.addEventListener('click', clearCanvas);
         if(onApply){
             confirmBtn.addEventListener('click', () => onApply.onClick({data: getExportData()}));
-        } else {
-            confirmBtn.addEventListener('click', exportImage);
         }
 
         document.getElementById("renameMapBtn").addEventListener("click",()=>{
