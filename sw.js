@@ -1,12 +1,20 @@
+var cacheName = 'secondVersion';
+
 self.addEventListener('install', (e) => {
   e.waitUntil(
-    caches.open('tilemap-editor-store').then((cache) => cache.addAll([
+    caches.open(cacheName).then((cache) => cache.addAll([
       '/tilemap-editor/',
       '/tilemap-editor/index.html',
       '/tilemap-editor/src/tilemap-editor.js',
       '/tilemap-editor/src/styles.css',
     ])),
   );
+});
+
+self.addEventListener('message', function (event) {
+    if (event.data.action === 'skipWaiting') {
+        self.skipWaiting();
+    }
 });
 
 self.addEventListener('fetch', (e) => {
