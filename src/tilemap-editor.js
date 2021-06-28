@@ -172,7 +172,7 @@
         ({layers: [getEmptyLayer("bottom"), getEmptyLayer("middle"), getEmptyLayer("top")], name,
             mapWidth, mapHeight, tileSize, width: mapWidth * SIZE_OF_CROP,height: mapHeight * SIZE_OF_CROP });
 
-    const getEmptyTilesetTag = (name, tiles ={}) =>({name,tiles});
+    const getEmptyTilesetTag = (name, code, tiles ={}) =>({name,code,tiles});
 
     const getEmptyTileSet = (src, name="tileset",gridWidth, gridHeight, tileData = {},symbolStartIdx, tags={}) => {
         return { src, name, gridWidth, gridHeight, tileCount: gridWidth * gridHeight, tileData, symbolStartIdx, tags}
@@ -908,7 +908,7 @@
             }
             const newMapKey = makeNewKey(ACTIVE_MAP);
 
-            maps[newMapKey] = {...JSON.parse(JSON.stringify(maps[ACTIVE_MAP])), name: newMapKey};
+            maps[newMapKey] = {...JSON.parse(JSON.stringify(maps[ACTIVE_MAP])), name: newMapKey};// todo prompt to ask for name
             updateMaps();
         })
         document.getElementById("removeMapBtn").addEventListener("click",()=>{
@@ -931,7 +931,7 @@
                     alert("Tag already exists");
                     return;
                 }
-                tileSets[tilesetDataSel.value].tags[result] = getEmptyTilesetTag(result);
+                tileSets[tilesetDataSel.value].tags[result] = getEmptyTilesetTag(result, result);
                 updateTilesetDataList();
             }
         });
