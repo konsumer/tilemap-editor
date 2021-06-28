@@ -299,7 +299,7 @@
     const randomLetters = new Array(10680).fill(1).map((_, i) => String.fromCharCode(165 + i));
 
     const updateTilesetGridContainer = () =>{
-        const viewMode = tileDataSel.value;
+        const viewMode = tileDataSel.value;//
         const tilesetData = tileSets[tilesetDataSel.value];
         if(!tilesetData) return;
 
