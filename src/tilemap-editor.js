@@ -64,6 +64,7 @@
             </div>
         </div>
         <div id="toolButtonsWrapper">
+        --
           <button class="button-as-link active-tool" value="0" title="paint tiles">🖌️</button>
           <button class="button-as-link" value="4" title="random from selected">🎲</button> 
           <button class="button-as-link" value="1" title="erase tiles">🗑️</button>
