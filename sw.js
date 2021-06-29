@@ -1,6 +1,8 @@
+const cacheName = "0.4.2";
+
 self.addEventListener('install', (e) => {
   e.waitUntil(
-    caches.open('tilemap-editor-store').then((cache) => cache.addAll([
+    caches.open(cacheName).then((cache) => cache.addAll([
       '/tilemap-editor/',
       '/tilemap-editor/index.html',
       '/tilemap-editor/src/tilemap-editor.js',
