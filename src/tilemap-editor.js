@@ -157,7 +157,7 @@
     }
     const getEmptyLayer = (name="layer")=> ({tiles:{}, visible: true, name});
     let tilesetImage, canvas, tilesetContainer, tilesetSelection, cropSize,
-        clearCanvasBtn, confirmBtn, tilesetGridContainer,
+        confirmBtn, tilesetGridContainer,
         layersElement, resizingCanvas, mapTileHeight, mapTileWidth, tileDataSel,
         tilesetDataSel, mapsDataSel;
 
@@ -174,8 +174,8 @@
 
     const getEmptyTilesetTag = (name, code, tiles ={}) =>({name,code,tiles});
 
-    const getEmptyTileSet = (src, name="tileset",gridWidth, gridHeight, tileData = {},symbolStartIdx, tags={}) => {
-        return { src, name, gridWidth, gridHeight, tileCount: gridWidth * gridHeight, tileData, symbolStartIdx, tags}
+    const getEmptyTileSet = (src, name="tileset",gridWidth, gridHeight, tileData = {},symbolStartIdx,tileSize=SIZE_OF_CROP, tags={}) => {
+        return { src, name, gridWidth, gridHeight, tileCount: gridWidth * gridHeight, tileData, symbolStartIdx,tileSize, tags}
     }
 
     const getSnappedPos = (pos) => Math.round(pos / SIZE_OF_CROP) * SIZE_OF_CROP;
@@ -531,7 +531,7 @@
         const result = window.confirm(`This will clear the map ${maps[ACTIVE_MAP].name}...\nAre you sure you want to do this? It can't be undone...`);
         if (result) {
             maps[ACTIVE_MAP].layers = [getEmptyLayer("bottom"), getEmptyLayer("middle"), getEmptyLayer("top")];
-            setLayer(layers.length - 1);
+            setLayer(0);
             updateLayers();
             draw();
         }
@@ -576,24 +576,45 @@
     }
 
     const getFlattenedData = () => {
-        const layers = maps[ACTIVE_MAP].layers;
-        const flattenedData = Array(layers.length).fill([]).map(()=>{
-           return Array(mapTileHeight).fill([]).map(row=>{
-               return Array(mapTileWidth).fill([]).map(column => ({
-                   tile: null,
-                   tileSymbol: " "// a space is an empty tile
-               }))
-           })
-       });
-        layers.forEach((layerObj,lrIndex) => {
-            Object.entries(layerObj.tiles).forEach(([key,tile])=>{
-                const [x,y] = key.split("-");
-                if(Number(y) < mapTileHeight && Number(x) < mapTileWidth) {
-                    flattenedData[lrIndex][Number(y)][Number(x)] = {tile, tileSymbol: tile.tileSymbol || "*"};
-                }
-            })
+        const result = Object.entries(maps).map(([key, map])=>{
+            const layers = map.layers;
+            const flattenedData = Array(layers.length).fill([]).map(()=>{
+                return Array(map.mapHeight).fill([]).map(row=>{
+                    return Array(map.mapWidth).fill([]).map(column => ({
+                        tile: null,
+                        tileSymbol: " "// a space is an empty tile
+                    }))
+                })
+            });
+            layers.forEach((layerObj,lrIndex) => {
+                Object.entries(layerObj.tiles).forEach(([key,tile])=>{
+                    const [x,y] = key.split("-");
+                    if(Number(y) < map.mapHeight && Number(x) < map.mapWidth) {
+                        flattenedData[lrIndex][Number(y)][Number(x)] = {tile, tileSymbol: tile.tileSymbol || "*"};
+                    }
+                })
+            });
+            return {map:key,flattenedData};
         });
-        return flattenedData;
+        return result;
+       //  const layers = maps[ACTIVE_MAP].layers;
+       //  const flattenedData = Array(layers.length).fill([]).map(()=>{
+       //     return Array(mapTileHeight).fill([]).map(row=>{
+       //         return Array(mapTileWidth).fill([]).map(column => ({
+       //             tile: null,
+       //             tileSymbol: " "// a space is an empty tile
+       //         }))
+       //     })
+       // });
+       //  layers.forEach((layerObj,lrIndex) => {
+       //      Object.entries(layerObj.tiles).forEach(([key,tile])=>{
+       //          const [x,y] = key.split("-");
+       //          if(Number(y) < mapTileHeight && Number(x) < mapTileWidth) {
+       //              flattenedData[lrIndex][Number(y)][Number(x)] = {tile, tileSymbol: tile.tileSymbol || "*"};
+       //          }
+       //      })
+       //  });
+       //  return flattenedData;
     };
     const getExportData = () => {
         const exportData = {maps, tileSets, flattenedData: getFlattenedData(), activeMap: ACTIVE_MAP, downloadAsTextFile};
@@ -672,7 +693,7 @@
                         x, y, tilesetIdx: idx, tileSymbol
                     }
                 })
-                tileSets[idx] = getEmptyTileSet(tsImage,`tileset ${idx}`,gridWidth, gridHeight,tilesetTileData,symbolStartIdx, oldTilesets[idx]?.tags);
+                tileSets[idx] = getEmptyTileSet(tsImage,`tileset ${idx}`,gridWidth, gridHeight,tilesetTileData,symbolStartIdx, SIZE_OF_CROP, oldTilesets[idx]?.tags);
 
                 symbolStartIdx += tileCount;
                 // tileSets = {...tileSets, ...oldTilesets};
@@ -815,7 +836,6 @@
         attachTo.className = "tilemap_editor_root";
         tilesetImage = document.getElementById('tileset-source');
         cropSize = document.getElementById('cropSize');
-        clearCanvasBtn = document.getElementById("clearCanvasBtn");
 
         confirmBtn = document.getElementById("confirmBtn");
         if(onApply){
@@ -1074,7 +1094,7 @@
             draw();
         })
 
-        clearCanvasBtn.addEventListener('click', clearCanvas);
+        document.getElementById("clearCanvasBtn").addEventListener('click', clearCanvas);
         if(onApply){
             confirmBtn.addEventListener('click', () => onApply.onClick(getExportData()));
         }
