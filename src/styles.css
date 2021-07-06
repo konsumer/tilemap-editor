@@ -386,7 +386,6 @@ cursor: pointer;
 
 .select_container select {
   flex: 1;
-  max-width: 70%;
 }
 
 /*dark mode*/
@@ -419,6 +418,9 @@ cursor: pointer;
   background-color: #17171fc7 !important;
   border-radius: 2px;
   padding: 2px;
+}
+.sticky_settings select{
+  max-width: 35%;
 }
 .tilemaps_selector{
   display: flex;
