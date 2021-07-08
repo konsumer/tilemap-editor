@@ -26,6 +26,7 @@ TileMap Editor is a fat-free tile map editor with zero dependencies and a scalab
 - Multi-tile selection and painting (drag select multiple tiles from the tileset)
 - Tileset meta-data editing (Assign tags to tiles, automatic assignment of symbols to tiles)
 - Animated tiles support
+- Flipped tiles support
 - Tilemap layers (as many as you like)
 - Export boilerplate code for kaboomjs https://kaboomjs.com/ (wip)
 - Customizable export data
@@ -55,9 +56,19 @@ It also scales all the way down to a smartphone screen in portrait mode
   <img src="screenshots/mobile.png" />
 </p>
 
+You can flip tiles
+ <p align="center">
+  <img src="screenshots/flipTileOnX.gif" />
+</p>
+
 It can even do animated tiles
  <p align="center">
   <img src="screenshots/animatedTiles.gif" />
+</p>
+
+The random tile brush can also use animation frames to place a random frame 
+ <p align="center">
+  <img src="screenshots/randomTileFrame.gif" />
 </p>
 
 ## :cyclone: Reason
