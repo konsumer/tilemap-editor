@@ -259,15 +259,17 @@
                     <div class="slider-wrapper">
                       <label for="layerOpacitySlider">Opacity</label>
                       <input type="range" min="0" max="1" value="1" id="layerOpacitySlider" step="0.01">
-                      <output for="layerOpacitySlider" id="layerOpacitySliderValue">1</output>
+                      <output for="layerOpacitySlider" id="layerOpacitySliderValue">${maps[ACTIVE_MAP].layers[newLayer]?.opacity}</output>
                     </div>
                 </div>
             </div>
         `;
+        document.getElementById("layerOpacitySlider").value = maps[ACTIVE_MAP].layers[newLayer]?.opacity;
         document.getElementById("layerOpacitySlider").addEventListener("change", e =>{
             document.getElementById("layerOpacitySliderValue").innerText = e.target.value;
             maps[ACTIVE_MAP].layers[currentLayer].opacity = Number(e.target.value);
             draw();
+            updateLayers();
         })
     }
 
@@ -305,7 +307,7 @@
         layersElement.innerHTML = maps[ACTIVE_MAP].layers.map((layer, index)=>{
             return `
               <div class="layer">
-                <div id="selectLayerBtn-${index}" class="layer select_layer" tile-layer="${index}" title="${layer.name}">${layer.name}</div>
+                <div id="selectLayerBtn-${index}" class="layer select_layer" tile-layer="${index}" title="${layer.name}">${layer.name} ${layer.opacity < 1 ? ` (${layer.opacity})` : ""}</div>
                 <span id="setLayerVisBtn-${index}" vis-layer="${index}"></span>
                 <div id="trashLayerBtn-${index}" trash-layer="${index}" ${maps[ACTIVE_MAP].layers.length > 1 ? "":`disabled="true"`}>🗑️</div>
               </div>
