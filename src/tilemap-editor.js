@@ -1264,7 +1264,7 @@
         })
 
         document.getElementById("toolButtonsWrapper").addEventListener("click",e=>{
-            if(e.target.getAttribute("for")?.includes("tool")) setActiveTool(Number(e.target.value));
+            if(e.target.getAttribute("name") === "tool") setActiveTool(Number(e.target.value));
         })
 
         cropSize.addEventListener('change', e=>{
