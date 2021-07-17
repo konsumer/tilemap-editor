@@ -420,7 +420,6 @@
         return [{...data, x:tx,y:ty}];
     }
 
-    // the tile needs to use the image of the tileset it came from
     const draw = (shouldDrawGrid = true) =>{
         const ctx = getContext();
         ctx.clearRect(0, 0, WIDTH, HEIGHT);
@@ -662,11 +661,9 @@
     const exportImage = () => {
         draw(false);
         const data = canvas.toDataURL();
-
         const image = new Image();
         image.src = data;
         image.crossOrigin = "anonymous";
-
         const w = window.open('');
         w.document.write(image.outerHTML);
         draw();
@@ -683,6 +680,7 @@
                 setTileData(x,y,newSymbol, "tileSymbol");
                 updateSelection();
                 updateTilesetGridContainer();
+                addToUndoStack();
             }
     }
 
@@ -732,7 +730,6 @@
             document.querySelector(".canvas_resizer[resizerdir='y'] input").value = String(mapTileHeight);
             document.getElementById("canvasHeightInp").value  = String(mapTileHeight);
         }
-
         draw();
     }
 
@@ -766,11 +763,23 @@
         undoStepPosition += 1;
         undoStack.length = undoStepPosition;
         undoStack.push(JSON.parse(JSON.stringify({maps,tileSets, currentLayer, ACTIVE_MAP, IMAGES, undoStepPosition})));
-        // console.log("undo stack updated", undoStack, undoStepPosition)
+        //console.log("undo stack updated", undoStack, undoStepPosition)
     }
     const restoreFromUndoStackData = () => {
         maps = decoupleReferenceFromObj(undoStack[undoStepPosition].maps);
-        tileSets = decoupleReferenceFromObj(undoStack[undoStepPosition].tileSets); // console.log({undoStepPosition, undoStack})
+        const undoTileSets = decoupleReferenceFromObj(undoStack[undoStepPosition].tileSets);
+        if(JSON.stringify(undoTileSets) !== JSON.stringify(tileSets)) {
+            tileSets = undoTileSets; // done to prevent the below, which is expensive
+            updateTilesetGridContainer();
+        }
+        tileSets = undoTileSets;
+        updateTilesetDataList();
+        const undoIMAGES = decoupleReferenceFromObj(undoStack[undoStepPosition].IMAGES);
+        if(JSON.stringify(IMAGES) !== JSON.stringify(undoIMAGES)){
+            IMAGES = undoIMAGES;
+            updateTilesets();
+        }
+
         const undoLayer = decoupleReferenceFromObj(undoStack[undoStepPosition].currentLayer);
         const undoActiveMap = decoupleReferenceFromObj(undoStack[undoStepPosition].ACTIVE_MAP);
         updateLayers();
@@ -779,12 +788,6 @@
         if(undoActiveMap !== ACTIVE_MAP){
             setActiveMap(undoActiveMap)
             updateMaps();
-        }
-        // tileset related
-        const undoIMAGES = decoupleReferenceFromObj(undoStack[undoStepPosition].IMAGES);
-        if(JSON.stringify(IMAGES) !== JSON.stringify(undoIMAGES)){
-            console.log("update tilesets")
-            updateTilesets();
         }
         draw();
     }
@@ -920,7 +923,6 @@
             HEIGHT = canvas.height;
             selection = [{}];
             ACTIVE_MAP = data ? Object.keys(data.maps)[0] : "Map_1";
-            console.log("MAPS",data)
             maps = data ? {...data.maps} : {[ACTIVE_MAP]: getEmptyMap("Map 1")};
             tileSets = data ? {...data.tileSets} : {};
             updateTilesets();
@@ -1048,6 +1050,7 @@
             if (e.button === 0) {
                 if(viewMode !== "" && viewMode !== "frames"){
                     selection.forEach(selected=>{
+                        addToUndoStack();
                         const {x, y} = selected;
                         const tileKey = `${x}-${y}`;
                         const tagTiles = tileSets[tilesetDataSel.value]?.tags[viewMode]?.tiles;
@@ -1059,7 +1062,6 @@
                             }
                         }
                     });
-
                 } else if (viewMode === "frames") {
                     setFramesToSelection(tileFrameSel.value);
                 }
@@ -1135,12 +1137,14 @@
                 }
                 tileSets[tilesetDataSel.value].tags[result] = getEmptyTilesetTag(result, result);
                 updateTilesetDataList();
+                addToUndoStack();
             }
         });
         document.getElementById("removeTileTagBtn").addEventListener("click",()=>{
             if (tileDataSel.value && tileDataSel.value in tileSets[tilesetDataSel.value].tags) {
                 delete tileSets[tilesetDataSel.value].tags[tileDataSel.value];
                 updateTilesetDataList();
+                addToUndoStack();
             }
         });
         // Tileset frames
@@ -1178,7 +1182,6 @@
         // Tileset SELECT callbacks
         tilesetDataSel = document.getElementById("tilesetDataSel");
         tilesetDataSel.addEventListener("change",e=>{
-            addToUndoStack();
             tilesetImage.src = TILESET_ELEMENTS[e.target.value].src;
             tilesetImage.crossOrigin = "Anonymous";
             updateTilesetDataList();
@@ -1241,6 +1244,7 @@
         document.getElementById("removeTilesetBtn").addEventListener("click",()=>{
             //Remove current tileset
             if (tilesetDataSel.value !== "0") {
+                addToUndoStack();
                 IMAGES.splice(Number(tilesetDataSel.value),1);
                 updateTilesets();
             }
