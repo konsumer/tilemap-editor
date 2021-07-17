@@ -434,6 +434,12 @@
             Object.keys(layer.tiles).forEach((key) => {
                 const [positionX, positionY] = key.split('-').map(Number);
                 const {x, y, tilesetIdx, isFlippedX} = layer.tiles[key];
+
+                if(!(tilesetIdx in TILESET_ELEMENTS)) { //texture not found
+                    ctx.fillStyle = 'red';
+                    ctx.fillRect(positionX * SIZE_OF_CROP, positionY * SIZE_OF_CROP, SIZE_OF_CROP, SIZE_OF_CROP);
+                    return;
+                }
                 if(isFlippedX){
                     ctx.save();//Special canvas crap to flip a slice, cause drawImage cant do it
                     ctx.translate(ctx.canvas.width, 0);
@@ -469,6 +475,13 @@
                 const [positionX, positionY] = key.split('-').map(Number);
                 const {start, width, height, frameCount} = layer.animatedTiles[key];
                 const {x, y, tilesetIdx} = start;
+                if(!(tilesetIdx in TILESET_ELEMENTS)) { //texture not found
+                    ctx.fillStyle = 'yellow';
+                    ctx.fillRect(positionX * SIZE_OF_CROP, positionY * SIZE_OF_CROP, SIZE_OF_CROP * width, SIZE_OF_CROP * height);
+                    ctx.fillStyle = 'blue';
+                    ctx.fillText("X",positionX * SIZE_OF_CROP + 5,positionY * SIZE_OF_CROP + 10);
+                    return;
+                }
                 const frameIndex = tileDataSel.value === "frames" ? Math.round(Date.now()/120) % frameCount : 1; //30fps
                 ctx.drawImage(
                     TILESET_ELEMENTS[tilesetIdx],
@@ -526,8 +539,9 @@
     }
     const getCurrentFrames = () => tileSets[tilesetDataSel.value]?.frames[tileFrameSel.value];
     const getSelectedFrameCount = () => getCurrentFrames()?.frameCount || 1;
+    const shouldNotAddAnimatedTile = () => (tileDataSel.value !== "frames" && getSelectedFrameCount() !== 1) || Object.keys(tileSets[tilesetDataSel.value]?.frames).length === 0;
     const addTile = (key) => {
-        if (tileDataSel.value !== "frames" && getSelectedFrameCount() !== 1) {
+        if (shouldNotAddAnimatedTile()) {
             addSelectedTiles(key);
         } else {
             // if animated tile mode and has more than one frames, add/remove to animatedTiles
@@ -538,7 +552,7 @@
 
     const addRandomTile = (key) =>{
         // TODO add probability for empty
-        if (tileDataSel.value !== "frames" && getSelectedFrameCount() !== 1) {
+        if (shouldNotAddAnimatedTile()) {
             maps[ACTIVE_MAP].layers[currentLayer].tiles[key] = selection[Math.floor(Math.random()*selection.length)];
         }else {
             // do the same, but add random from frames instead
@@ -743,14 +757,15 @@
                 maps: undoStack[undoStepPosition].maps,
                 tileSets: undoStack[undoStepPosition].tileSets,
                 currentLayer,
-                ACTIVE_MAP
+                ACTIVE_MAP,
+                IMAGES
             }) : undefined;
-        const newState = JSON.stringify({maps,tileSets,currentLayer,ACTIVE_MAP});
+        const newState = JSON.stringify({maps,tileSets,currentLayer,ACTIVE_MAP,IMAGES});
         if (newState === oldState) return; // prevent updating when no changes are present in the data!
 
         undoStepPosition += 1;
         undoStack.length = undoStepPosition;
-        undoStack.push(JSON.parse(JSON.stringify({maps,tileSets, currentLayer, ACTIVE_MAP, undoStepPosition})));
+        undoStack.push(JSON.parse(JSON.stringify({maps,tileSets, currentLayer, ACTIVE_MAP, IMAGES, undoStepPosition})));
         // console.log("undo stack updated", undoStack, undoStepPosition)
     }
     const restoreFromUndoStackData = () => {
@@ -764,6 +779,12 @@
         if(undoActiveMap !== ACTIVE_MAP){
             setActiveMap(undoActiveMap)
             updateMaps();
+        }
+        // tileset related
+        const undoIMAGES = decoupleReferenceFromObj(undoStack[undoStepPosition].IMAGES);
+        if(JSON.stringify(IMAGES) !== JSON.stringify(undoIMAGES)){
+            console.log("update tilesets")
+            updateTilesets();
         }
         draw();
     }
@@ -899,6 +920,7 @@
             HEIGHT = canvas.height;
             selection = [{}];
             ACTIVE_MAP = data ? Object.keys(data.maps)[0] : "Map_1";
+            console.log("MAPS",data)
             maps = data ? {...data.maps} : {[ACTIVE_MAP]: getEmptyMap("Map 1")};
             tileSets = data ? {...data.tileSets} : {};
             updateTilesets();
@@ -1002,6 +1024,7 @@
         });
 
         const setFramesToSelection = (animName) =>{
+            if(animName === "") return;
             tileSets[tilesetDataSel.value].frames[animName] = {
                 ...(tileSets[tilesetDataSel.value].frames[animName]||{}),
                 width: selectionSize[0], height:selectionSize[1], start: selection[0], tiles: selection,
@@ -1039,7 +1062,6 @@
 
                 } else if (viewMode === "frames") {
                     setFramesToSelection(tileFrameSel.value);
-                    console.log("FRAMES", tileSets[tilesetDataSel.value].frames[tileFrameSel.value])
                 }
                 updateTilesetGridContainer();
             }
@@ -1149,23 +1171,26 @@
             }
         });
         document.getElementById("tileFrameCount").addEventListener("change", e=>{
-
+            if(tileFrameSel.value === "") return;
             getCurrentFrames().frameCount = Number(e.target.value);
             updateTilesetGridContainer();
         })
         // Tileset SELECT callbacks
         tilesetDataSel = document.getElementById("tilesetDataSel");
         tilesetDataSel.addEventListener("change",e=>{
+            addToUndoStack();
             tilesetImage.src = TILESET_ELEMENTS[e.target.value].src;
             tilesetImage.crossOrigin = "Anonymous";
             updateTilesetDataList();
         })
 
         const replaceSelectedTileSet = (src) => {
+            addToUndoStack();
             IMAGES[Number(tilesetDataSel.value)] = src;
             updateTilesets();
         }
         const addNewTileSet = (src) => {
+            addToUndoStack();
             IMAGES.push(src);
             updateTilesets();
         }
@@ -1217,7 +1242,7 @@
             //Remove current tileset
             if (tilesetDataSel.value !== "0") {
                 IMAGES.splice(Number(tilesetDataSel.value),1);
-                initDataAfterLoad();
+                updateTilesets();
             }
         });
 
