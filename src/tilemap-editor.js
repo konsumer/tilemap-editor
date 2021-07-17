@@ -70,6 +70,7 @@
               <label for="tool0" title="paint tiles" data-value="0" class="menu">
                   <div id="flipBrushIndicator">🖌️</div>
                   <div class="dropdown">
+                    <div class="item nohover">Brush tool options</div>
                     <div class="item">
                         <label for="toggleFlipX" class="">Flip tile on x</label>
                         <input type="checkbox" id="toggleFlipX" style="display: none"> 
@@ -219,7 +220,6 @@
     let isMouseDown = false;
     let maps = {};
     let tileSets = {};
-    let stateHistory = [{}, {}, {}]; // TODO get rid?
 
     let apiTileSetLoaders = {};
     let selectedTileSetLoader = {};
@@ -240,6 +240,7 @@
         document.getElementById("activeLayerLabel").innerHTML = `
             Editing Layer: ${maps[ACTIVE_MAP].layers[newLayer]?.name} 
             <div class="dropdown left">
+                <div class="item nohover">Layer: ${maps[ACTIVE_MAP].layers[newLayer]?.name} </div>
                 <div class="item">
                     <div class="slider-wrapper">
                       <label for="layerOpacitySlider">Opacity</label>
@@ -260,31 +261,32 @@
 
     const setLayerIsVisible = (layer, override = null) => {
         const layerNumber = Number(layer);
+        addToUndoStack();
         maps[ACTIVE_MAP].layers[layerNumber].visible = override ?? !maps[ACTIVE_MAP].layers[layerNumber].visible;
         document
             .getElementById(`setLayerVisBtn-${layer}`)
             .innerHTML = maps[ACTIVE_MAP].layers[layerNumber].visible ? "👁️": "👓";
         draw();
+        addToUndoStack();
     }
 
     const trashLayer = (layer) => {
         const layerNumber = Number(layer);
-        const result = window.confirm("Are you sure? Undo is not implemented!");
-        if(result) {
-            maps[ACTIVE_MAP].layers.splice(layerNumber, 1);
-            stateHistory.splice(layerNumber, 1);
-            updateLayers();
-            setLayer(maps[ACTIVE_MAP].layers.length - 1);
-            draw();
-        }
+        addToUndoStack();
+        maps[ACTIVE_MAP].layers.splice(layerNumber, 1);
+        updateLayers();
+        setLayer(maps[ACTIVE_MAP].layers.length - 1);
+        draw();
+        addToUndoStack();
     }
 
     const addLayer = () => {
         const newLayerName = prompt("Enter layer name", `Layer${maps[ACTIVE_MAP].layers.length + 1}`);
         if(newLayerName !== null) {
+            addToUndoStack();
             maps[ACTIVE_MAP].layers.push(getEmptyLayer(newLayerName));
-            stateHistory.push({});//TODO merge all of these into one damn array
             updateLayers();
+            addToUndoStack();
         }
     }
 
@@ -597,36 +599,11 @@
         }
     }
 
-    const applyCtrlZ=(key, isArray) => {
-        const tileHistory = stateHistory[currentLayer][key];
-
-        if (isArray(tileHistory)) {
-            const lastSelected = stateHistory[currentLayer][key].pop();
-
-            if (isArray(lastSelected)) {
-                selection[0] = lastSelected;
-                updateSelection();
-                addTile(key);
-                draw();
-            }
-        }
-    }
-
     const toggleTile=(event)=> {
         if(ACTIVE_TOOL === 2 || !maps[ACTIVE_MAP].layers[currentLayer].visible) return;
 
         const {x,y} = getSelectedTile(event)[0];
         const key = `${x}-${y}`;
-
-        const isArray = (likely) => Array.isArray(likely) && likely[0] !== undefined;
-
-        if (event.altKey) {
-            if (event.type === 'pointerdown' || event.type === 'pointermove') {
-                applyCtrlZ(key, isArray);
-            }
-            return;
-        }
-        updateStateHistory(key, isArray);
 
         if (event.shiftKey || event.button === 1) {
             removeTile(key);
@@ -649,27 +626,13 @@
         addToUndoStack();
     }
 
-    const updateStateHistory=(key, isArray) => {
-        const tileHistory = stateHistory[currentLayer][key];
-
-        const selected = maps[ACTIVE_MAP].layers[currentLayer].tiles[key];
-        if (isArray(tileHistory)) {
-            if (selected && !(selected.x === selection[0].x && selected.y === selection[0].y)) {
-                stateHistory[currentLayer][key].push(selected);
-            }
-        } else {
-            stateHistory[currentLayer][key] = [{coords: [5, 17]}];
-        }
-    }
-
     const clearCanvas = () => {
-        const result = window.confirm(`This will clear the map ${maps[ACTIVE_MAP].name}...\nAre you sure you want to do this? It can't be undone...`);
-        if (result) {
-            maps[ACTIVE_MAP].layers = [getEmptyLayer("bottom"), getEmptyLayer("middle"), getEmptyLayer("top")];
-            setLayer(0);
-            updateLayers();
-            draw();
-        }
+        addToUndoStack();
+        maps[ACTIVE_MAP].layers = [getEmptyLayer("bottom"), getEmptyLayer("middle"), getEmptyLayer("top")];
+        setLayer(0);
+        updateLayers();
+        draw();
+        addToUndoStack();
     }
 
     const downloadAsTextFile = (input, fileName = "tilemap-editor.json") =>{
@@ -771,27 +734,44 @@
     let undoStepPosition = -1;
     let undoStack = [];
     const addToUndoStack = () => {
-        const oldState = undoStack.length > 0 ? JSON.stringify({maps:undoStack[undoStepPosition].maps,tileSets:undoStack[undoStepPosition].tileSets}) : undefined;
-        const newState = JSON.stringify({maps,tileSets});
+        const oldState = undoStack.length > 0 ? JSON.stringify(
+            {
+                maps:undoStack[undoStepPosition].maps,
+                tileSets:undoStack[undoStepPosition].tileSets,
+                currentLayer,
+                ACTIVE_MAP
+            }) : undefined;
+        const newState = JSON.stringify({maps,tileSets,currentLayer,ACTIVE_MAP});
         if (newState === oldState) return; // prevent updating when no changes are present in the data!
 
         undoStepPosition += 1;
         undoStack.length = undoStepPosition;
-        undoStack.push(JSON.parse(JSON.stringify({maps,tileSets, undoStepPosition})));// console.log("undo stack updated", undoStack)
+        undoStack.push(JSON.parse(JSON.stringify({maps,tileSets, currentLayer, ACTIVE_MAP, undoStepPosition})));// console.log("undo stack updated", undoStack)
+    }
+    const restoreFromUndoStackData = () => {
+        maps = decoupleReferenceFromObj(undoStack[undoStepPosition].maps);
+        tileSets = decoupleReferenceFromObj(undoStack[undoStepPosition].tileSets); // console.log({undoStepPosition, undoStack})
+        const undoLayer = decoupleReferenceFromObj(undoStack[undoStepPosition].currentLayer);
+        const undoActiveMap = decoupleReferenceFromObj(undoStack[undoStepPosition].ACTIVE_MAP);
+        if(currentLayer !== undoLayer) {
+            updateLayers();
+            setLayer(undoLayer);
+        }
+        if(undoActiveMap !== ACTIVE_MAP){
+            setActiveMap(undoActiveMap)
+            updateMaps();
+        }
+        draw();
     }
     const undo = () => {
         if (undoStepPosition === 0) return;
         undoStepPosition -= 1;
-        maps = decoupleReferenceFromObj(undoStack[undoStepPosition].maps);
-        tileSets = decoupleReferenceFromObj(undoStack[undoStepPosition].tileSets); // console.log({undoStepPosition, undoStack})
-        draw();
+        restoreFromUndoStackData();
     }
     const redo = () => {
         if (undoStepPosition === undoStack.length - 1) return;
         undoStepPosition += 1;
-        maps = decoupleReferenceFromObj(undoStack[undoStepPosition].maps);
-        tileSets = decoupleReferenceFromObj(undoStack[undoStepPosition].tileSets); // console.log({undoStepPosition, undoStack})
-        draw();
+        restoreFromUndoStackData();
     }
 
     const updateTilesetDataList = (populateFrames = false) => {
@@ -913,7 +893,6 @@
             WIDTH = canvas.width;
             HEIGHT = canvas.height;
             selection = [{}];
-            stateHistory = [{}, {}, {}];
             ACTIVE_MAP = data ? Object.keys(data.maps)[0] : "Map_1";
             maps = data ? {...data.maps} : {[ACTIVE_MAP]: getEmptyMap("Map 1")};
             tileSets = data ? {...data.tileSets} : {};
@@ -1072,20 +1051,24 @@
         // Maps DATA callbacks
         mapsDataSel = document.getElementById("mapsDataSel");
         mapsDataSel.addEventListener("change", e=>{
+            addToUndoStack();
             setActiveMap(e.target.value);
+            addToUndoStack();
         })
         document.getElementById("addMapBtn").addEventListener("click",()=>{
             const suggestMapName = `Map ${Object.keys(maps).length + 1}`;
             const result = window.prompt("Enter new map key...", suggestMapName);
             if(result !== null) {
+                addToUndoStack();
                 const newMapKey = result.trim().replaceAll(" ","_") || suggestMapName;
                 if (newMapKey in maps){
                     alert("A map with this key already exists.")
                     return
                 }
                 maps[newMapKey] = getEmptyMap(result.trim());
+                addToUndoStack();
+                updateMaps();
             }
-            updateMaps();
         })
         document.getElementById("duplicateMapBtn").addEventListener("click",()=>{
             const makeNewKey = (key) => {
@@ -1095,18 +1078,18 @@
                 }
                 return suggestedNew;
             }
+            addToUndoStack();
             const newMapKey = makeNewKey(ACTIVE_MAP);
-
             maps[newMapKey] = {...JSON.parse(JSON.stringify(maps[ACTIVE_MAP])), name: newMapKey};// todo prompt to ask for name
             updateMaps();
+            addToUndoStack();
         })
         document.getElementById("removeMapBtn").addEventListener("click",()=>{
-            const confirm = window.confirm(`Are you sure you want to delete ${maps[ACTIVE_MAP].name}?\nYou can't undo this...`);
-            if (confirm) {
-                delete maps[ACTIVE_MAP];
-                setActiveMap(Object.keys(maps)[0])
-                updateMaps();
-            }
+            addToUndoStack();
+            delete maps[ACTIVE_MAP];
+            setActiveMap(Object.keys(maps)[0])
+            updateMaps();
+            addToUndoStack();
         })
         // Tileset DATA Callbacks //tileDataSel
         tileDataSel = document.getElementById("tileDataSel");
