@@ -782,13 +782,12 @@
 
         const undoLayer = decoupleReferenceFromObj(undoStack[undoStepPosition].currentLayer);
         const undoActiveMap = decoupleReferenceFromObj(undoStack[undoStepPosition].ACTIVE_MAP);
-        updateLayers();
-        setLayer(undoLayer);
-
         if(undoActiveMap !== ACTIVE_MAP){
             setActiveMap(undoActiveMap)
             updateMaps();
         }
+        updateLayers(); // needs to happen after active map is set and maps are updated
+        setLayer(undoLayer);
         draw();
     }
     const undo = () => {
